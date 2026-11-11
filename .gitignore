@@ -1,0 +1,4 @@
+/dist/
+/taskam
+*.test
+.DS_Store
