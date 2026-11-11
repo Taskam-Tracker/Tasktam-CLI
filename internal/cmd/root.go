@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	neturl "net/url"
 	"os"
 	"os/exec"
 	"runtime"
@@ -202,9 +203,11 @@ func parseIDs(args []string) ([]int, error) {
 	return ids, nil
 }
 
-// openBrowser opens url in the default browser; it reports false when it can't (e.g. over SSH).
-func openBrowser(url string) bool {
-	if os.Getenv("SSH_CONNECTION") != "" || os.Getenv("TASKAM_NO_BROWSER") != "" {
+// openBrowser opens url in the default browser; it reports false when it can't (e.g. over SSH). Only pages of
+// the configured Taskam site are opened, so a server-supplied link can't hand the OS opener a file path, a
+// custom scheme or a flag.
+func (a *app) openBrowser(url string) bool {
+	if os.Getenv("SSH_CONNECTION") != "" || os.Getenv("TASKAM_NO_BROWSER") != "" || !a.onSite(url) {
 		return false
 	}
 	var cmd *exec.Cmd
@@ -220,6 +223,16 @@ func openBrowser(url string) bool {
 		cmd = exec.Command("xdg-open", url)
 	}
 	return cmd.Start() == nil
+}
+
+// onSite reports whether raw is an http(s) URL on the configured web app's origin.
+func (a *app) onSite(raw string) bool {
+	u, err := neturl.Parse(raw)
+	site, siteErr := neturl.Parse(a.cfg.SiteURL)
+	if err != nil || siteErr != nil || u.User != nil {
+		return false
+	}
+	return (u.Scheme == "https" || u.Scheme == "http") && u.Scheme == site.Scheme && strings.EqualFold(u.Host, site.Host)
 }
 
 // siteLink is a page of the web app ("/tasks/42").

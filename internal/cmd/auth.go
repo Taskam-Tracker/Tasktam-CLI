@@ -39,7 +39,7 @@ With --token, use a personal access token you created in Settings instead.`,
 				}
 				fmt.Fprintf(a.errOut, "To connect this terminal, open:\n\n  %s\n\nand confirm the code  %s\n\n",
 					a.style.Bold(start.VerificationURIComplete), a.style.Bold(a.style.Violet(start.UserCode)))
-				if !noBrowser && openBrowser(start.VerificationURIComplete) {
+				if !noBrowser && a.openBrowser(start.VerificationURIComplete) {
 					fmt.Fprintln(a.errOut, a.style.Dim("Opened your browser."))
 				}
 				fmt.Fprintln(a.errOut, a.style.Dim("Waiting for approval… (Ctrl-C to cancel)"))

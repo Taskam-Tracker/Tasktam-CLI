@@ -217,7 +217,7 @@ func (a *app) openCommand() *cobra.Command {
 				}
 			}
 			url := a.siteLink(path)
-			if !openBrowser(url) {
+			if !a.openBrowser(url) {
 				a.println(url)
 			}
 			return nil

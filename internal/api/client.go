@@ -109,6 +109,9 @@ func (c *Client) Do(ctx context.Context, method, path string, query url.Values, 
 	if err != nil {
 		return err
 	}
+	if cleaned, err := cleanJSON(data); err == nil {
+		data = cleaned
+	}
 	if res.StatusCode >= 400 {
 		apiErr := &Error{Status: res.StatusCode}
 		var payload struct {

@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -55,5 +56,30 @@ func TestNoContentAndUnreachable(t *testing.T) {
 	srv.Close()
 	if err := New(srv.URL, "tk_x", "test").Delete(context.Background(), 1); err == nil {
 		t.Fatal("expected a connection error")
+	}
+}
+
+func TestRepliesAreStrippedOfTerminalControls(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/tasks/1/" {
+			_, _ = w.Write([]byte(`{"id": 1, "title": "Pay \u001b]0;pwned\u0007rent\r", "description": "line 1\n\tline 2\u009b2J"}`))
+			return
+		}
+		w.WriteHeader(http.StatusForbidden)
+		_, _ = w.Write([]byte(`{"error": "forbidden", "detail": "no \u001b[2Jaccess"}`))
+	}))
+	defer srv.Close()
+	c := New(srv.URL, "tk_test", "test")
+	task, err := c.Task(context.Background(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if task.Title != "Pay ]0;pwnedrent" || task.Description != "line 1\n\tline 22J" {
+		t.Errorf("not sanitised: %q / %q", task.Title, task.Description)
+	}
+	_, err = c.Task(context.Background(), 2)
+	var apiErr *Error
+	if !errors.As(err, &apiErr) || apiErr.Detail != "no [2Jaccess" {
+		t.Errorf("error detail not sanitised: %#v", err)
 	}
 }
